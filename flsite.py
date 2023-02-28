@@ -22,6 +22,7 @@ def connect_db():
 
 
 def create_db():
+   # """Вспомагательная функция для создания таблиц БД"""
     db = connect_db()
     with app.open_resource('sq_db.sql', mode='r') as f:
         db.cursor().executescript(f.read())
@@ -38,7 +39,6 @@ def create_db():
 def index():
     db = get_db()
     dbase = FDataBase(db)
-    # print(url_for("index"))
     return render_template("index.html", menu=dbase.getMenu(), posts=dbase.getPostsAnnounce())
 
 
@@ -49,7 +49,7 @@ def addPost():
 
     if request.method == "POST":
         if len(request.form['name']) > 4 and len(request.form['post']) > 10:
-            res = dbase.addPost(request.form['name'], request.form['post'])
+            res = dbase.addPost(request.form['name'], request.form['post'], request.form['url'])
             if not res:
                 flash('Ошибка добавления статьи', category='error')
             else:
@@ -59,11 +59,11 @@ def addPost():
     return render_template('add_post.html', menu=dbase.getMenu(), title="Добавление статьи")
 
 
-@app.route("/post/<int:id_post>")
-def showPost(id_post):
+@app.route("/post/<alias>")
+def showPost(alias):
     db = get_db()
     dbase = FDataBase(db)
-    title, post = dbase.getPost(id_post)
+    title, post = dbase.getPost(alias)
     if not title:
         abort(404)
 
@@ -71,11 +71,13 @@ def showPost(id_post):
 
 @app.teardown_appcontext
 def close_db(error):
+   # """Закрываем соединение с БД, если оно было установлено"""
     if hasattr(g, 'link_db'):
         g.link_db.close()
 
 
 def get_db():
+    """Соединение с БД"""
     if not hasattr(g, 'link_db'):
         g.link_db = connect_db()
     return g.link_db
