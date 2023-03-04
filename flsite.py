@@ -4,6 +4,7 @@ import os
 
 from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
 from FDataBase import FDataBase
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DATABASE = '/tmp/flsite.db'
 DEBUG = True
@@ -22,13 +23,35 @@ def connect_db():
 
 
 def create_db():
-   # """Вспомагательная функция для создания таблиц БД"""
+    """Вспомагательная функция для создания таблиц БД"""
     db = connect_db()
     with app.open_resource('sq_db.sql', mode='r') as f:
         db.cursor().executescript(f.read())
     db.commit()
     db.close()
 
+
+def get_db():
+    """Соединение с БД"""
+    if not hasattr(g, 'link_db'):
+        g.link_db = connect_db()
+    return g.link_db
+
+
+dbase = None
+@app.before_request
+def before_request():
+    """Установление соединения с БД перед выполнением запроса"""
+    global dbase
+    db = get_db()
+    dbase = FDataBase(db)
+
+
+@app.teardown_appcontext
+def close_db(error):
+    """Закрываем соединение с БД, если оно было установлено"""
+    if hasattr(g, 'link_db'):
+        g.link_db.close()
 
 # menu = [{"name": "Установка", "url": "install-flask"},
 #         {"name": "Первое приложение", "url": "first-app"},
@@ -69,18 +92,32 @@ def showPost(alias):
 
     return render_template('post.html', menu=dbase.getMenu(), title=title, post=post)
 
-@app.teardown_appcontext
-def close_db(error):
-   # """Закрываем соединение с БД, если оно было установлено"""
-    if hasattr(g, 'link_db'):
-        g.link_db.close()
+
+@app.route("/login")
+def login():
+    db = get_db()
+    dbase = FDataBase(db)
+    return render_template("login.html", menu=dbase.getMenu(), title="Авторизация")
 
 
-def get_db():
-    """Соединение с БД"""
-    if not hasattr(g, 'link_db'):
-        g.link_db = connect_db()
-    return g.link_db
+@app.route("/register", methods=["POST", "GET"])
+def register():
+    db = get_db()
+    dbase = FDataBase(db)
+    if request.method == "POST":
+        if len(request.form['name']) > 4 and len(request.form['email']) > 4 \
+            and len(request.form['psw']) > 4 and request.form['psw'] == request.form["psw2"]:
+            hash = generate_password_hash(request.form['psw'])
+            res = dbase.addUser(request.form['name'], request.form['email'], hash)
+            if res:
+                flash("Вы успешно зарегистрированы", "success")
+                return redirect(url_for("login"))
+            else:
+                flash("Ошибка при добавлении в БД", "error")
+        else:
+            flash("Неверно заполнены поля", "error")
+
+    return render_template("register.html", menu=dbase.getMenu(), title="Регистрация")
 
 
 @app.route("/about")
@@ -105,17 +142,17 @@ def contact():
     return render_template("contact.html", title="Обратная связь", menu=dbase.getMenu())
 
 
-@app.route("/login", methods=["POST", "GET"])
-def login():
-    db = get_db()
-    dbase = FDataBase(db)
-    if 'userLogged' in session:
-        return redirect(url_for('profile', username=session['userLogged']))
-    elif request.method == 'POST' and request.form['username'] == "selfedu" and request.form['psw'] == "123":
-        session['userLogged'] = request.form['username']
-        return redirect(url_for('profile', username=session['userLogged']))
+#@app.route("/login", methods=["POST", "GET"])
+#def login():
+ #   db = get_db()
+#  dbase = FDataBase(db)
+ #   if 'userLogged' in session:
+  #      return redirect(url_for('profile', username=session['userLogged']))
+   # elif request.method == 'POST' and request.form['username'] == "selfedu" and request.form['psw'] == "123":
+    #    session['userLogged'] = request.form['username']
+     #   return redirect(url_for('profile', username=session['userLogged']))
 
-    return render_template('login.html', title="Авторизация", menu=dbase.getMenu())
+    #return render_template('login.html', title="Авторизация", menu=dbase.getMenu())
 
 
 @app.route("/profile/<username>")
