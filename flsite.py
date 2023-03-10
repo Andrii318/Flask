@@ -156,27 +156,6 @@ def contact():
     return render_template("contact.html", title="Обратная связь", menu=dbase.getMenu())
 
 
-#@app.route("/login", methods=["POST", "GET"])
-#def login():
- #   db = get_db()
-#  dbase = FDataBase(db)
- #   if 'userLogged' in session:
-  #      return redirect(url_for('profile', username=session['userLogged']))
-   # elif request.method == 'POST' and request.form['username'] == "selfedu" and request.form['psw'] == "123":
-    #    session['userLogged'] = request.form['username']
-     #   return redirect(url_for('profile', username=session['userLogged']))
-
-    #return render_template('login.html', title="Авторизация", menu=dbase.getMenu())
-
-
-#@app.route("/profile/<username>")
-#def profile(username):
-   # if 'userLogged' not in session or session['userLogged'] != username:
-     #   abort(401)
-
-   # return f"Профиль пользователя: {username}"
-
-
 @app.errorhandler(404)
 def pageNotFount(error):
     return render_template("page404.html", title='Страница не найдена', menu=dbase.getMenu()), 404
@@ -203,7 +182,7 @@ def userava():
         return ""
 
     h = make_response(img)
-    h.headers['Content-Type'] = 'images/png'
+    h.headers['Content-Type'] = 'image/png'
     return h
 
 
@@ -226,11 +205,6 @@ def upload():
             flash("Ошибка обнавления аватара", "error")
 
     return redirect(url_for('profile'))
-
-
-# @app.route("/profile/<username>")
-# def profile(username, path):
-#     return f"Пользователь: {username}, {path}"
 
 
 if __name__ == "__main__":
